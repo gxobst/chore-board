@@ -28,3 +28,22 @@ Completed chores are visible in a separate view, sorted most-recently-completed 
 - Libraries: use Django's built-in views and templates; no new dependencies.
 - Guidelines: follow `_docs/design-system.md` for UI styling; follow `_docs/testing-guidelines.md` for tests.
 - The Completed view must remain consistent with the data model from task #1 (Chore model) and the task list from task #3.
+
+---
+
+## Engineer Comment (Task 5 Implementation)
+
+**Commit:** `fe78a10055df70d530ab2d77276dd49dd5d99abf`
+
+**What I did:**
+- Added `completed_at` DateTimeField (nullable) to the Chore model to track when each chore was completed
+- Added `mark_complete()` method (sets `completed=True` and `completed_at=now`) and `restore()` method (sets `completed=False` and `completed_at=None`) on the Chore model
+- Created `CompletedView` (GET `/completed/`) that lists only completed chores sorted by `completed_at` descending (most recent first)
+- Created `RestoreChoreView` (POST `/<pk>/restore/`) that restores a single chore back to active status
+- Created `BulkRestoreView` (POST `/completed/bulk-restore/`) that restores multiple selected chores at once
+- Created `completed.html` template with: per-row Restore buttons, checkboxes for bulk selection, a bulk Restore Selected button, empty-state message, and display of title + completion date
+- Updated `base.html` navigation to link to the Completed view
+- Updated `TaskCompleteView` to use `mark_complete()` so `completed_at` is set when marking complete
+- Wrote 22 tests covering all acceptance criteria (87 total tests passing)
+
+**Acceptance criteria implemented:** 10/10
