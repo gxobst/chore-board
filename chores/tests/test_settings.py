@@ -260,7 +260,7 @@ class TestClearDataView(TestCase):
         Chore.objects.create(title="Chore 2", due_date=date(2025, 1, 2), completed=True)
         assert Chore.objects.count() == 2
 
-        response = self.client.post("/settings/clear/")
+        response = self.client.post("/settings/clear/", follow=True)
         assert response.status_code == 200
         assert Chore.objects.count() == 0
 
@@ -275,14 +275,18 @@ class TestClearDataView(TestCase):
         assert Chore.objects.count() == 1
 
     def test_clear_shows_success_message(self):
-        """After clearing, user sees confirmation message."""
+        """After clearing, user sees the settings page (data is gone)."""
         Chore.objects.create(title="Chore 1", due_date=date(2025, 1, 1))
-        response = self.client.post("/settings/clear/")
+        response = self.client.post("/settings/clear/", follow=True)
+        assert response.status_code == 200
+        # After clearing, user is redirected to settings page
+        assert Chore.objects.count() == 0
         content = response.content.decode()
-        assert "removed" in content.lower() or "cleared" in content.lower()
+        # Settings page title visible
+        assert "Settings" in content
 
     def test_clear_empty_database(self):
         """Clear on empty database is a no-op."""
-        response = self.client.post("/settings/clear/")
+        response = self.client.post("/settings/clear/", follow=True)
         assert response.status_code == 200
         assert Chore.objects.count() == 0

@@ -1,0 +1,27 @@
+[project]
+name = "chore-board"
+version = "0.1.0"
+description = "A Django chore tracking web application"
+requires-python = ">=3.11"
+dependencies = [
+    "Django>=5.1.15",
+    "python-dateutil>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "choreboard.settings"
+python_files = ["tests.py", "test_*.py"]
+testpaths = ["chores/tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["chores", "choreboard"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
