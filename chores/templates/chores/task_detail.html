@@ -27,6 +27,11 @@
             {% else %}—{% endif %}
         </span>
     </div>
+
+    <div class="detail-field" style="margin-bottom: 16px;">
+        <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Recurrence</label>
+        <span style="font-size: 1rem;">{{ chore.get_recurrence_display }}</span>
+    </div>
     
     <div class="detail-field" style="margin-bottom: 16px;">
         <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Tags</label>
@@ -44,10 +49,35 @@
 </div>
 
 <div class="actions" style="display: flex; flex-direction: column; gap: 12px;">
+    {% if chore.is_recurring %}
+    <div id="recurrence-dialog" style="background: #f0f9ff; border: 1px solid #2563eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+        <p style="margin-bottom: 12px; font-weight: 500;">This is a recurring chore. Create the next occurrence?</p>
+        <div style="display: flex; gap: 12px;">
+            <form method="post" action="{% url 'task_complete' chore.pk %}" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="create_next" value="yes">
+                <button type="submit" class="btn btn-primary">Yes, Complete & Create Next</button>
+            </form>
+            <form method="post" action="{% url 'task_complete' chore.pk %}" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="create_next" value="no">
+                <button type="submit" class="btn btn-secondary">No, Complete Only</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
     <form method="post" action="{% url 'task_complete' chore.pk %}">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary">Mark Complete</button>
     </form>
+    {% endif %}
+    
+    {% if chore.is_recurring %}
+    <form method="post" action="{% url 'skip_occurrence' chore.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">Skip Occurrence</button>
+    </form>
+    {% endif %}
     
     <a href="{% url 'task_edit' chore.pk %}" class="btn btn-secondary">Edit</a>
     

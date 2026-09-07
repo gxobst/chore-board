@@ -129,6 +129,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "Alex",
             "notes": "Use soap",
             "priority": "High",
+            "recurrence": "none",
             "tags_text": "Kitchen, Cleaning",
         }
         response = self.client.post(self.url, data)
@@ -192,6 +193,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "",
             "notes": "",
             "priority": "",
+            "recurrence": "none",
             "tags_text": "",
         }
         response = self.client.post(self.url, data)
@@ -206,6 +208,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "Jordan",
             "notes": "",
             "priority": "",
+            "recurrence": "none",
             "tags_text": "",
         }
         response = self.client.post(self.url, data)
@@ -220,6 +223,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "",
             "notes": "",
             "priority": "",
+            "recurrence": "none",
             "tags_text": "",
         }
         response = self.client.post(self.url, data)
@@ -235,6 +239,7 @@ class CreateChoreViewTest(TestCase):
                 "assignee": "",
                 "notes": "",
                 "priority": priority,
+                "recurrence": "none",
                 "tags_text": "",
             }
             response = self.client.post(self.url, data)
@@ -249,6 +254,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "",
             "notes": "",
             "priority": "",
+            "recurrence": "none",
             "tags_text": "Kitchen, Cleaning, Urgent",
         }
         response = self.client.post(self.url, data)
@@ -266,6 +272,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "",
             "notes": "Use the new sponge",
             "priority": "",
+            "recurrence": "none",
             "tags_text": "",
         }
         response = self.client.post(self.url, data)
@@ -307,6 +314,7 @@ class CreateChoreViewTest(TestCase):
             "assignee": "Alex",
             "notes": "Scrub the tub",
             "priority": "Medium",
+            "recurrence": "none",
             "tags_text": "Bathroom, Deep Clean",
         }
         response = self.client.post(self.url, data)
@@ -572,6 +580,7 @@ class TaskEditViewTest(TestCase):
             "assignee": "Jordan",
             "notes": "Use new soap",
             "priority": "Medium",
+            "recurrence": "none",
             "tags_text": "Kitchen, Cleaning",
         }
         response = self.client.post(url, data)
@@ -591,6 +600,7 @@ class TaskEditViewTest(TestCase):
             "assignee": "Jordan",
             "notes": "Use new soap",
             "priority": "Medium",
+            "recurrence": "none",
             "tags_text": "Kitchen, Cleaning",
         }
         response = self.client.post(url, data)
@@ -609,6 +619,7 @@ class TaskEditViewTest(TestCase):
             "assignee": "",
             "notes": "",
             "priority": "",
+            "recurrence": "none",
             "tags_text": "",
         }
         response = self.client.post(url, data)
@@ -623,6 +634,7 @@ class TaskEditViewTest(TestCase):
             "assignee": "Alex",
             "notes": "Use soap",
             "priority": "High",
+            "recurrence": "none",
             "tags_text": "Kitchen, Cleaning",
         }
         response = self.client.post(url, data)
@@ -967,4 +979,385 @@ class CalendarViewTest(TestCase):
         # Check that prev/next links are in the HTML
         content = response.content.decode()
         self.assertIn("calendar", content.lower())
+
+
+import uuid
+from datetime import date, timedelta
+
+
+class RecurringChoreModelTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_recurrence_field_default_is_none(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15")
+        self.assertEqual(chore.recurrence, "none")
+
+    def test_recurrence_field_daily(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        self.assertEqual(chore.recurrence, "daily")
+
+    def test_recurrence_field_weekly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="weekly")
+        self.assertEqual(chore.recurrence, "weekly")
+
+    def test_recurrence_field_monthly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="monthly")
+        self.assertEqual(chore.recurrence, "monthly")
+
+    def test_is_recurring_false_for_none(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="none")
+        self.assertFalse(chore.is_recurring())
+
+    def test_is_recurring_true_for_daily(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        self.assertTrue(chore.is_recurring())
+
+    def test_is_recurring_true_for_weekly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="weekly")
+        self.assertTrue(chore.is_recurring())
+
+    def test_is_recurring_true_for_monthly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="monthly")
+        self.assertTrue(chore.is_recurring())
+
+    def test_next_occurrence_date_daily(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        self.assertEqual(chore.next_occurrence_date(), date(2025, 1, 16))
+
+    def test_next_occurrence_date_weekly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="weekly")
+        self.assertEqual(chore.next_occurrence_date(), date(2025, 1, 22))
+
+    def test_next_occurrence_date_monthly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="monthly")
+        self.assertEqual(chore.next_occurrence_date(), date(2025, 2, 15))
+
+    def test_next_occurrence_date_none(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="none")
+        self.assertIsNone(chore.next_occurrence_date())
+
+    def test_create_next_occurrence_daily(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        new_chore = chore.create_next_occurrence()
+        self.assertIsNotNone(new_chore)
+        self.assertEqual(new_chore.title, "Test")
+        self.assertEqual(new_chore.due_date, date(2025, 1, 16))
+        self.assertEqual(new_chore.recurrence, "daily")
+        self.assertFalse(new_chore.completed)
+
+    def test_create_next_occurrence_weekly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="weekly")
+        new_chore = chore.create_next_occurrence()
+        self.assertEqual(new_chore.due_date, date(2025, 1, 22))
+
+    def test_create_next_occurrence_monthly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="monthly")
+        new_chore = chore.create_next_occurrence()
+        self.assertEqual(new_chore.due_date, date(2025, 2, 15))
+
+    def test_create_next_occurrence_none_returns_none(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="none")
+        result = chore.create_next_occurrence()
+        self.assertIsNone(result)
+
+    def test_create_next_occurrence_links_series(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        new_chore = chore.create_next_occurrence()
+        chore.refresh_from_db()
+        self.assertIsNotNone(chore.series_id)
+        self.assertEqual(chore.series_id, new_chore.series_id)
+
+    def test_create_next_occurrence_preserves_fields(self):
+        tag = Tag.objects.create(name="Kitchen")
+        chore = Chore.objects.create(
+            title="Test", due_date="2025-01-15", recurrence="daily",
+            assignee="Alex", notes="Some notes", priority="High"
+        )
+        chore.tags.add(tag)
+        new_chore = chore.create_next_occurrence()
+        self.assertEqual(new_chore.title, "Test")
+        self.assertEqual(new_chore.assignee, "Alex")
+        self.assertEqual(new_chore.notes, "Some notes")
+        self.assertEqual(new_chore.priority, "High")
+        self.assertIn(tag, new_chore.tags.all())
+
+    def test_skip_occurrence_daily(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        result = chore.skip_occurrence()
+        self.assertTrue(result)
+        chore.refresh_from_db()
+        self.assertEqual(chore.due_date, date(2025, 1, 16))
+        self.assertFalse(chore.completed)
+
+    def test_skip_occurrence_weekly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="weekly")
+        chore.skip_occurrence()
+        chore.refresh_from_db()
+        self.assertEqual(chore.due_date, date(2025, 1, 22))
+
+    def test_skip_occurrence_monthly(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="monthly")
+        chore.skip_occurrence()
+        chore.refresh_from_db()
+        self.assertEqual(chore.due_date, date(2025, 2, 15))
+
+    def test_skip_occurrence_none_returns_false(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="none")
+        result = chore.skip_occurrence()
+        self.assertFalse(result)
+
+    def test_assign_series_id(self):
+        chore = Chore.objects.create(title="Test", due_date="2025-01-15", recurrence="daily")
+        self.assertIsNone(chore.series_id)
+        chore.assign_series_id()
+        self.assertIsNotNone(chore.series_id)
+
+
+class RecurringChoreFormTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_create_form_includes_recurrence_field(self):
+        response = self.client.get(reverse("create_chore"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recurrence")
+
+    def test_create_form_has_recurrence_options(self):
+        response = self.client.get(reverse("create_chore"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "None")
+        self.assertContains(response, "Daily")
+        self.assertContains(response, "Weekly")
+        self.assertContains(response, "Monthly")
+
+    def test_create_chore_with_recurrence_daily(self):
+        data = {
+            "title": "Recurring Task",
+            "due_date": "2025-01-15",
+            "assignee": "Alex",
+            "notes": "Notes",
+            "priority": "High",
+            "recurrence": "daily",
+            "tags_text": "",
+        }
+        response = self.client.post(reverse("create_chore"), data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.recurrence, "daily")
+
+    def test_create_chore_with_recurrence_weekly(self):
+        data = {
+            "title": "Recurring Task",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "recurrence": "weekly",
+            "tags_text": "",
+        }
+        response = self.client.post(reverse("create_chore"), data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.recurrence, "weekly")
+
+    def test_create_chore_with_recurrence_monthly(self):
+        data = {
+            "title": "Recurring Task",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "recurrence": "monthly",
+            "tags_text": "",
+        }
+        response = self.client.post(reverse("create_chore"), data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.recurrence, "monthly")
+
+    def test_edit_form_shows_series_scope_for_recurring(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        chore.assign_series_id()
+        response = self.client.get(reverse("task_edit", kwargs={"pk": chore.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Current occurrence only")
+        self.assertContains(response, "Entire series")
+
+    def test_edit_form_hides_series_scope_for_non_recurring(self):
+        chore = Chore.objects.create(
+            title="Non-recurring", due_date="2025-01-15", recurrence="none"
+        )
+        response = self.client.get(reverse("task_edit", kwargs={"pk": chore.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Current occurrence only")
+        self.assertNotContains(response, "Entire series")
+
+
+class RecurringChoreCompleteViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_complete_recurring_chore_shows_dialog(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        response = self.client.get(reverse("task_detail", kwargs={"pk": chore.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Create the next occurrence?")
+
+    def test_complete_recurring_chore_yes_creates_next(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        url = reverse("task_complete", kwargs={"pk": chore.pk})
+        response = self.client.post(url, {"create_next": "yes"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Chore.objects.count(), 2)
+        new_chore = Chore.objects.exclude(pk=chore.pk).first()
+        self.assertEqual(new_chore.due_date, date(2025, 1, 16))
+
+    def test_complete_recurring_chore_no_does_not_create_next(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        url = reverse("task_complete", kwargs={"pk": chore.pk})
+        response = self.client.post(url, {"create_next": "no"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Chore.objects.count(), 1)
+
+    def test_complete_non_recurring_chore_no_dialog(self):
+        chore = Chore.objects.create(
+            title="Non-recurring", due_date="2025-01-15", recurrence="none"
+        )
+        url = reverse("task_complete", kwargs={"pk": chore.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Chore.objects.count(), 1)
+
+    def test_complete_recurring_weekly_creates_next_in_7_days(self):
+        chore = Chore.objects.create(
+            title="Weekly", due_date="2025-01-15", recurrence="weekly"
+        )
+        url = reverse("task_complete", kwargs={"pk": chore.pk})
+        self.client.post(url, {"create_next": "yes"})
+        new_chore = Chore.objects.exclude(pk=chore.pk).first()
+        self.assertEqual(new_chore.due_date, date(2025, 1, 22))
+
+    def test_complete_recurring_monthly_creates_next_in_1_month(self):
+        chore = Chore.objects.create(
+            title="Monthly", due_date="2025-01-15", recurrence="monthly"
+        )
+        url = reverse("task_complete", kwargs={"pk": chore.pk})
+        self.client.post(url, {"create_next": "yes"})
+        new_chore = Chore.objects.exclude(pk=chore.pk).first()
+        self.assertEqual(new_chore.due_date, date(2025, 2, 15))
+
+    def test_complete_recurring_chore_links_series(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        url = reverse("task_complete", kwargs={"pk": chore.pk})
+        self.client.post(url, {"create_next": "yes"})
+        new_chore = Chore.objects.exclude(pk=chore.pk).first()
+        chore.refresh_from_db()
+        self.assertIsNotNone(chore.series_id)
+        self.assertEqual(chore.series_id, new_chore.series_id)
+
+
+class SkipOccurrenceViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_skip_occurrence_advances_due_date(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        url = reverse("skip_occurrence", kwargs={"pk": chore.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        chore.refresh_from_db()
+        self.assertEqual(chore.due_date, date(2025, 1, 16))
+        self.assertFalse(chore.completed)
+
+    def test_skip_occurrence_no_new_record(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        url = reverse("skip_occurrence", kwargs={"pk": chore.pk})
+        self.client.post(url)
+        self.assertEqual(Chore.objects.count(), 1)
+
+    def test_skip_occurrence_redirects_to_detail(self):
+        chore = Chore.objects.create(
+            title="Recurring", due_date="2025-01-15", recurrence="daily"
+        )
+        url = reverse("skip_occurrence", kwargs={"pk": chore.pk})
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("task_detail", kwargs={"pk": chore.pk}))
+
+
+class EditSeriesViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_edit_current_occurrence_only_others_unaffected(self):
+        series_id = uuid.uuid4()
+        chore1 = Chore.objects.create(
+            title="Original", due_date="2025-01-15", recurrence="daily", series_id=series_id
+        )
+        chore2 = Chore.objects.create(
+            title="Original", due_date="2025-01-16", recurrence="daily", series_id=series_id
+        )
+        url = reverse("task_edit", kwargs={"pk": chore1.pk})
+        data = {
+            "title": "Updated",
+            "due_date": "2025-01-20",
+            "assignee": "Alex",
+            "notes": "",
+            "priority": "",
+            "recurrence": "daily",
+            "series_scope": "current",
+            "tags_text": "",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        chore1.refresh_from_db()
+        chore2.refresh_from_db()
+        self.assertEqual(chore1.title, "Updated")
+        self.assertEqual(chore2.title, "Original")
+
+    def test_entire_series_updates_all(self):
+        series_id = uuid.uuid4()
+        chore1 = Chore.objects.create(
+            title="Original", due_date="2025-01-15", recurrence="daily", series_id=series_id
+        )
+        chore2 = Chore.objects.create(
+            title="Original", due_date="2025-01-16", recurrence="daily", series_id=series_id
+        )
+        url = reverse("task_edit", kwargs={"pk": chore1.pk})
+        data = {
+            "title": "Updated",
+            "due_date": "2025-01-20",
+            "assignee": "Alex",
+            "notes": "New notes",
+            "priority": "High",
+            "recurrence": "daily",
+            "series_scope": "series",
+            "tags_text": "",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        chore1.refresh_from_db()
+        chore2.refresh_from_db()
+        self.assertEqual(chore1.title, "Updated")
+        self.assertEqual(chore1.assignee, "Alex")
+        self.assertEqual(chore1.notes, "New notes")
+        self.assertEqual(chore1.priority, "High")
+        self.assertEqual(chore2.title, "Updated")
+        self.assertEqual(chore2.assignee, "Alex")
+        self.assertEqual(chore2.notes, "New notes")
+        self.assertEqual(chore2.priority, "High")
 

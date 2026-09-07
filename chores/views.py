@@ -20,7 +20,9 @@ class CreateChoreView(View):
     def post(self, request):
         form = ChoreForm(request.POST)
         if form.is_valid():
-            form.save()
+            chore = form.save()
+            if chore.is_recurring() and not chore.series_id:
+                chore.assign_series_id()
             return redirect("task_list")
         return render(request, "chores/chore_form.html", {"form": form})
 
@@ -42,15 +44,49 @@ class TaskEditView(View):
     def get(self, request, pk):
         chore = get_object_or_404(Chore, pk=pk)
         form = ChoreForm(instance=chore)
-        return render(request, "chores/chore_form.html", {"form": form, "chore": chore, "is_edit": True})
+        is_recurring = chore.is_recurring()
+        return render(request, "chores/chore_form.html", {
+            "form": form, "chore": chore, "is_edit": True,
+            "is_recurring": is_recurring
+        })
 
     def post(self, request, pk):
         chore = get_object_or_404(Chore, pk=pk)
         form = ChoreForm(request.POST, instance=chore)
         if form.is_valid():
-            form.save()
+            # Check if this is a recurring chore and user chose series scope
+            scope = request.POST.get("series_scope", "current")
+            if scope == "series" and chore.series_id:
+                # Update all chores in the series
+                series_chores = Chore.objects.filter(series_id=chore.series_id)
+                title = form.cleaned_data.get("title")
+                assignee = form.cleaned_data.get("assignee")
+                notes = form.cleaned_data.get("notes")
+                priority = form.cleaned_data.get("priority")
+                recurrence = form.cleaned_data.get("recurrence")
+                series_chores.update(
+                    title=title,
+                    assignee=assignee,
+                    notes=notes,
+                    priority=priority,
+                    recurrence=recurrence,
+                )
+                # Handle tags for all series chores
+                tag_names = form.cleaned_data.get("tags_text", [])
+                tags = []
+                for name in tag_names:
+                    from .models import Tag
+                    tag, _ = Tag.objects.get_or_create(name=name)
+                    tags.append(tag)
+                for c in series_chores:
+                    c.tags.set(tags)
+            else:
+                form.save()
             return redirect("task_detail", pk=chore.pk)
-        return render(request, "chores/chore_form.html", {"form": form, "chore": chore, "is_edit": True})
+        return render(request, "chores/chore_form.html", {
+            "form": form, "chore": chore, "is_edit": True,
+            "is_recurring": chore.is_recurring()
+        })
 
 
 class TaskDeleteView(View):
@@ -67,9 +103,25 @@ class TaskDeleteView(View):
 class TaskCompleteView(View):
     def post(self, request, pk):
         chore = get_object_or_404(Chore, pk=pk)
+        create_next = request.POST.get("create_next")
+        
         chore.mark_complete()
         chore.save()
+        
+        if chore.is_recurring() and create_next == "yes":
+            if not chore.series_id:
+                chore.assign_series_id()
+                chore.save()
+            chore.create_next_occurrence()
+        
         return redirect("task_list")
+
+
+class SkipOccurrenceView(View):
+    def post(self, request, pk):
+        chore = get_object_or_404(Chore, pk=pk)
+        chore.skip_occurrence()
+        return redirect("task_detail", pk=chore.pk)
 
 
 class CompletedView(View):

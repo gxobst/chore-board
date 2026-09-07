@@ -14,6 +14,18 @@ PRIORITY_CHOICES = [
     ("High", "High"),
 ]
 
+RECURRENCE_CHOICES = [
+    ("none", "None"),
+    ("daily", "Daily"),
+    ("weekly", "Weekly"),
+    ("monthly", "Monthly"),
+]
+
+SERIES_SCOPE_CHOICES = [
+    ("current", "Current occurrence only"),
+    ("series", "Entire series"),
+]
+
 
 class ChoreForm(forms.ModelForm):
     tags_text = forms.CharField(
@@ -27,13 +39,16 @@ class ChoreForm(forms.ModelForm):
 
     class Meta:
         model = Chore
-        fields = ["title", "due_date", "assignee", "notes", "priority"]
+        fields = ["title", "due_date", "assignee", "notes", "priority", "recurrence"]
         widgets = {
             "due_date": forms.DateInput(
                 attrs={"type": "date", "class": "form-input"}
             ),
             "notes": forms.Textarea(
                 attrs={"rows": 3, "class": "form-input"}
+            ),
+            "recurrence": forms.Select(
+                attrs={"class": "form-input"}
             ),
         }
 
