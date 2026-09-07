@@ -28,3 +28,24 @@ A monthly calendar view that surfaces chores on their due dates, supports month-
 - Guidelines: Mobile-first responsive layout; reuse the existing create-chore form component for the add flow; follow existing template inheritance and styling conventions.
 - Data: Read from the `Chore` model created in #1; do not duplicate model logic.
 - Plan alignment: Per plan §9, users add chores by clicking a date and the calendar is not drag-and-drop in the MVP.
+
+---
+
+## Comment (Software Engineer)
+
+Implemented the calendar view per acceptance criteria:
+
+1. **CalendarView** added to `chores/views.py` — renders month grid using Python's `calendar` module, supports year/month query params for navigation
+2. **URL** `calendar/` added to `chores/urls.py`
+3. **Template** `chores/templates/chores/calendar.html` — responsive month grid with day headers, prev/next navigation, Today button, clickable dates with prefilled due_date query param
+4. **Date highlighting** — active (incomplete) chores get `has-chore` CSS class with background tint and a dot indicator
+5. **Today highlighting** — current date gets `today` class with blue background
+6. **Padding days** — adjacent month days marked with `padding` class, dimmed and non-clickable (no link)
+7. **Completed chores not highlighted** — view filters `completed=False` only
+8. **Click-to-add** — all date cells link to `/create/?due_date=YYYY-MM-DD`
+9. **Navigation** — Prev/Next buttons compute adjacent month/year correctly, Today button returns to current month
+10. **Responsive** — mobile-first CSS with 44px touch targets, larger cells on tablet/desktop
+
+Tests added in `chores/tests.py::CalendarViewTest` (14 tests): 200 status, template, month/year display, nav controls, day headers, chore highlighting, completed chore exclusion, click-to-add links, prev/next month navigation, padding days, today highlighting, responsive viewport.
+
+All 101 tests pass.
