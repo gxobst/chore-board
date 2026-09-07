@@ -1,0 +1,21 @@
+{% extends "chores/base.html" %}
+
+{% block title %}Delete {{ chore.title }} - Chore Board{% endblock %}
+{% block page_title %}Delete Chore{% endblock %}
+
+{% block content %}
+<div class="delete-confirm" style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px;">
+    <h2 style="font-size: 1.25rem; margin-bottom: 16px;">Delete Chore</h2>
+    <p style="margin-bottom: 24px; color: #6b7280;">
+        Are you sure you want to delete <strong>{{ chore.title }}</strong>? This action cannot be undone.
+    </p>
+    
+    <form method="post" action="{% url 'task_delete' chore.pk %}">
+        {% csrf_token %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'task_detail' chore.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

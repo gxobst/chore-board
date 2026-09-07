@@ -1,0 +1,56 @@
+{% extends "chores/base.html" %}
+
+{% block title %}{{ chore.title }} - Chore Board{% endblock %}
+{% block page_title %}Task Detail{% endblock %}
+
+{% block content %}
+<a href="{% url 'task_list' %}" class="btn btn-secondary" style="margin-bottom: 24px;">&larr; Back to Task List</a>
+
+<div class="chore-detail" style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px;">
+    <h2 style="font-size: 1.25rem; margin-bottom: 16px;">{{ chore.title }}</h2>
+    
+    <div class="detail-field" style="margin-bottom: 16px;">
+        <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Due Date</label>
+        <span style="font-size: 1rem;">{{ chore.due_date|date:"M d, Y" }}</span>
+    </div>
+    
+    <div class="detail-field" style="margin-bottom: 16px;">
+        <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Assignee</label>
+        <span style="font-size: 1rem;">{% if chore.assignee %}{{ chore.assignee }}{% else %}Unassigned{% endif %}</span>
+    </div>
+    
+    <div class="detail-field" style="margin-bottom: 16px;">
+        <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Priority</label>
+        <span style="font-size: 1rem;">
+            {% if chore.priority %}
+                <span class="priority-dot priority-{{ chore.priority }}"></span>{{ chore.priority }}
+            {% else %}—{% endif %}
+        </span>
+    </div>
+    
+    <div class="detail-field" style="margin-bottom: 16px;">
+        <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Tags</label>
+        <span style="font-size: 1rem;">
+            {% for tag in chore.tags.all %}
+                <span class="badge">{{ tag.name }}</span>
+            {% empty %}—{% endfor %}
+        </span>
+    </div>
+    
+    <div class="detail-field" style="margin-bottom: 16px;">
+        <label style="font-weight: 500; font-size: 0.875rem; color: #6b7280; display: block; margin-bottom: 4px;">Notes</label>
+        <span style="font-size: 1rem;">{% if chore.notes %}{{ chore.notes }}{% else %}—{% endif %}</span>
+    </div>
+</div>
+
+<div class="actions" style="display: flex; flex-direction: column; gap: 12px;">
+    <form method="post" action="{% url 'task_complete' chore.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Mark Complete</button>
+    </form>
+    
+    <a href="{% url 'task_edit' chore.pk %}" class="btn btn-secondary">Edit</a>
+    
+    <a href="{% url 'task_delete' chore.pk %}" class="btn btn-danger">Delete</a>
+</div>
+{% endblock %}

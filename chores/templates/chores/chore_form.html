@@ -1,12 +1,12 @@
 {% extends "chores/base.html" %}
 
-{% block title %}Create Chore - Chore Board{% endblock %}
-{% block page_title %}Create Chore{% endblock %}
+{% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Chore - Chore Board{% endblock %}
+{% block page_title %}{% if is_edit %}Edit{% else %}Create{% endif %} Chore{% endblock %}
 
 {% block content %}
-<h2 style="margin-bottom: 24px; font-size: 1.25rem;">Create New Chore</h2>
+<h2 style="margin-bottom: 24px; font-size: 1.25rem;">{% if is_edit %}Edit{% else %}Create New{% endif %} Chore</h2>
 
-<form method="post" action="{% url 'create_chore' %}" novalidate>
+<form method="post" action="{% if is_edit %}{% url 'task_edit' chore.pk %}{% else %}{% url 'create_chore' %}{% endif %}" novalidate>
     {% csrf_token %}
 
     <div class="form-group {% if form.title.errors %}has-error{% endif %}">
@@ -84,6 +84,6 @@
         {% endif %}
     </div>
 
-    <button type="submit" class="btn btn-primary">Create Chore</button>
+    <button type="submit" class="btn btn-primary">{% if is_edit %}Save Changes{% else %}Create Chore{% endif %}</button>
 </form>
 {% endblock %}

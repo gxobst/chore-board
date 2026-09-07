@@ -414,3 +414,230 @@ class TaskListViewTest(TestCase):
         response = self.client.get(self.url)
         self.assertContains(response, "viewport")
         self.assertContains(response, "width=device-width")
+
+
+class TaskDetailViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.chore = Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+            assignee="Alex",
+            notes="Use soap",
+            priority="High",
+        )
+        self.tag = Tag.objects.create(name="Kitchen")
+        self.chore.tags.add(self.tag)
+
+    def test_get_returns_200_and_displays_all_fields(self):
+        url = reverse("task_detail", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Wash dishes")
+        self.assertContains(response, "Jan 15, 2025")
+        self.assertContains(response, "Alex")
+        self.assertContains(response, "Use soap")
+        self.assertContains(response, "High")
+        self.assertContains(response, "Kitchen")
+
+    def test_detail_page_has_back_link(self):
+        url = reverse("task_detail", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "Back to Task List")
+        self.assertContains(response, reverse("task_list"))
+
+    def test_detail_page_has_edit_button(self):
+        url = reverse("task_detail", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "Edit")
+        self.assertContains(response, reverse("task_edit", kwargs={"pk": self.chore.pk}))
+
+    def test_detail_page_has_delete_button(self):
+        url = reverse("task_detail", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "Delete")
+        self.assertContains(response, reverse("task_delete", kwargs={"pk": self.chore.pk}))
+
+    def test_detail_page_has_mark_complete_button(self):
+        url = reverse("task_detail", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "Mark Complete")
+        self.assertContains(response, reverse("task_complete", kwargs={"pk": self.chore.pk}))
+
+
+class TaskCompleteViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.chore = Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+            completed=False,
+        )
+
+    def test_mark_complete_sets_is_completed_true(self):
+        url = reverse("task_complete", kwargs={"pk": self.chore.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.chore.refresh_from_db()
+        self.assertTrue(self.chore.completed)
+
+    def test_mark_complete_redirects_to_task_list(self):
+        url = reverse("task_complete", kwargs={"pk": self.chore.pk})
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("task_list"))
+
+    def test_completed_chore_not_in_active_list(self):
+        url = reverse("task_complete", kwargs={"pk": self.chore.pk})
+        self.client.post(url)
+        response = self.client.get(reverse("task_list"))
+        self.assertNotContains(response, "Wash dishes")
+
+    def test_completed_chore_appears_in_completed_view(self):
+        """After marking complete, chore.completed=True so it would appear in completed view."""
+        url = reverse("task_complete", kwargs={"pk": self.chore.pk})
+        self.client.post(url)
+        self.chore.refresh_from_db()
+        self.assertTrue(self.chore.completed)
+
+    def test_complete_nonexistent_chore_returns_404(self):
+        url = reverse("task_complete", kwargs={"pk": 9999})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 404)
+
+
+class TaskDeleteViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.chore = Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+        )
+
+    def test_get_delete_confirmation_page(self):
+        url = reverse("task_delete", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Delete Chore")
+        self.assertContains(response, "Wash dishes")
+        self.assertContains(response, "Are you sure")
+
+    def test_post_delete_removes_chore(self):
+        url = reverse("task_delete", kwargs={"pk": self.chore.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Chore.objects.count(), 0)
+
+    def test_post_delete_redirects_to_task_list(self):
+        url = reverse("task_delete", kwargs={"pk": self.chore.pk})
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("task_list"))
+
+    def test_delete_nonexistent_chore_returns_404(self):
+        url = reverse("task_delete", kwargs={"pk": 9999})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_cancel_delete_returns_to_detail(self):
+        url = reverse("task_delete", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "Cancel")
+        self.assertContains(response, reverse("task_detail", kwargs={"pk": self.chore.pk}))
+
+
+class TaskEditViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.chore = Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+            assignee="Alex",
+            notes="Use soap",
+            priority="High",
+        )
+        self.tag = Tag.objects.create(name="Kitchen")
+        self.chore.tags.add(self.tag)
+
+    def test_get_edit_form_prefilled(self):
+        url = reverse("task_edit", kwargs={"pk": self.chore.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Wash dishes")
+        self.assertContains(response, "Edit")
+
+    def test_post_edit_updates_chore(self):
+        url = reverse("task_edit", kwargs={"pk": self.chore.pk})
+        data = {
+            "title": "Clean dishes",
+            "due_date": "2025-02-20",
+            "assignee": "Jordan",
+            "notes": "Use new soap",
+            "priority": "Medium",
+            "tags_text": "Kitchen, Cleaning",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        self.chore.refresh_from_db()
+        self.assertEqual(self.chore.title, "Clean dishes")
+        self.assertEqual(str(self.chore.due_date), "2025-02-20")
+        self.assertEqual(self.chore.assignee, "Jordan")
+        self.assertEqual(self.chore.notes, "Use new soap")
+        self.assertEqual(self.chore.priority, "Medium")
+
+    def test_post_edit_redirects_to_detail(self):
+        url = reverse("task_edit", kwargs={"pk": self.chore.pk})
+        data = {
+            "title": "Clean dishes",
+            "due_date": "2025-02-20",
+            "assignee": "Jordan",
+            "notes": "Use new soap",
+            "priority": "Medium",
+            "tags_text": "Kitchen, Cleaning",
+        }
+        response = self.client.post(url, data)
+        self.assertRedirects(response, reverse("task_detail", kwargs={"pk": self.chore.pk}))
+
+    def test_edit_nonexistent_chore_returns_404(self):
+        url = reverse("task_edit", kwargs={"pk": 9999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_edit_with_invalid_data_shows_errors(self):
+        url = reverse("task_edit", kwargs={"pk": self.chore.pk})
+        data = {
+            "title": "",
+            "due_date": "2025-02-20",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "errorlist")
+
+    def test_edit_preserves_tags(self):
+        url = reverse("task_edit", kwargs={"pk": self.chore.pk})
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "Alex",
+            "notes": "Use soap",
+            "priority": "High",
+            "tags_text": "Kitchen, Cleaning",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        self.chore.refresh_from_db()
+        tag_names = list(self.chore.tags.values_list("name", flat=True))
+        self.assertIn("Kitchen", tag_names)
+        self.assertIn("Cleaning", tag_names)
+
+
+class TaskDetailNotFoundTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_nonexistent_chore_returns_404(self):
+        url = reverse("task_detail", kwargs={"pk": 9999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
