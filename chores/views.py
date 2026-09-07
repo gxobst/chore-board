@@ -1,9 +1,11 @@
+import json
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from .forms import ChoreForm
-from .models import Chore
+from .models import Chore, Tag
 import calendar
 from datetime import date, timedelta
 from urllib.parse import quote
@@ -296,3 +298,128 @@ class CalendarView(View):
             'today': today,
         }
         return render(request, "chores/calendar.html", context)
+
+
+class SettingsView(View):
+    def get(self, request):
+        return render(request, "chores/settings.html")
+
+
+class ExportDataView(View):
+    def get(self, request):
+        chores = Chore.objects.all().order_by("due_date", "created_at")
+        data = []
+        for chore in chores:
+            data.append({
+                "title": chore.title,
+                "due_date": chore.due_date.isoformat(),
+                "assignee": chore.assignee,
+                "notes": chore.notes,
+                "priority": chore.priority,
+                "tags": [tag.name for tag in chore.tags.all()],
+                "completed": chore.completed,
+                "completed_at": chore.completed_at.isoformat() if chore.completed_at else None,
+                "created_at": chore.created_at.isoformat() if chore.created_at else None,
+                "recurrence": chore.recurrence,
+                "series_id": str(chore.series_id) if chore.series_id else None,
+            })
+        
+        export_data = {"chores": data}
+        json_str = json.dumps(export_data, indent=2)
+        
+        today = timezone.localdate()
+        filename = f"chores-backup-{today.isoformat()}.json"
+        
+        response = HttpResponse(json_str, content_type="application/json")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+
+class ImportDataView(View):
+    def post(self, request):
+        if "file" not in request.FILES:
+            return render(request, "chores/settings.html", {
+                "import_error": "No file selected."
+            })
+        
+        uploaded_file = request.FILES["file"]
+        
+        if uploaded_file.size == 0:
+            return render(request, "chores/settings.html", {
+                "import_error": "The uploaded file is empty."
+            })
+        
+        try:
+            content = uploaded_file.read().decode("utf-8")
+            data = json.loads(content)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return render(request, "chores/settings.html", {
+                "import_error": "Invalid JSON file. Please upload a valid JSON file."
+            })
+        
+        if not isinstance(data, dict) or "chores" not in data:
+            return render(request, "chores/settings.html", {
+                "import_error": "Invalid file format. Expected a JSON file with a 'chores' array."
+            })
+        
+        chores_data = data["chores"]
+        if not isinstance(chores_data, list):
+            return render(request, "chores/settings.html", {
+                "import_error": "Invalid file format. 'chores' must be an array."
+            })
+        
+        imported_count = 0
+        for chore_data in chores_data:
+            if not isinstance(chore_data, dict):
+                continue
+            
+            title = chore_data.get("title", "").strip()
+            if not title:
+                continue
+            
+            due_date_str = chore_data.get("due_date", "")
+            try:
+                due_date = date.fromisoformat(due_date_str)
+            except (ValueError, TypeError):
+                due_date = timezone.localdate()
+            
+            assignee = chore_data.get("assignee", "")
+            notes = chore_data.get("notes", "")
+            priority = chore_data.get("priority", "")
+            recurrence = chore_data.get("recurrence", "none")
+            completed = chore_data.get("completed", False)
+            tag_names = chore_data.get("tags", [])
+            
+            chore = Chore.objects.create(
+                title=title,
+                due_date=due_date,
+                assignee=assignee,
+                notes=notes,
+                priority=priority,
+                recurrence=recurrence,
+                completed=completed,
+            )
+            
+            if tag_names and isinstance(tag_names, list):
+                tags = []
+                for name in tag_names:
+                    tag, _ = Tag.objects.get_or_create(name=name)
+                    tags.append(tag)
+                chore.tags.set(tags)
+            
+            imported_count += 1
+        
+        return render(request, "chores/settings.html", {
+            "import_success": f"Successfully imported {imported_count} chore{'s' if imported_count != 1 else ''}."
+        })
+
+
+class ClearDataView(View):
+    def get(self, request):
+        return render(request, "chores/confirm_clear.html")
+    
+    def post(self, request):
+        Chore.objects.all().delete()
+        return render(request, "chores/settings.html", {
+            "clear_success": "All data has been removed."
+        })

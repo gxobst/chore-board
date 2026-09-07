@@ -13,4 +13,8 @@ urlpatterns = [
     path("<int:pk>/restore/", views.RestoreChoreView.as_view(), name="restore_chore"),
     path("completed/bulk-restore/", views.BulkRestoreView.as_view(), name="bulk_restore"),
     path("calendar/", views.CalendarView.as_view(), name="calendar"),
+    path("settings/", views.SettingsView.as_view(), name="settings"),
+    path("settings/export/", views.ExportDataView.as_view(), name="export_data"),
+    path("settings/import/", views.ImportDataView.as_view(), name="import_data"),
+    path("settings/clear/", views.ClearDataView.as_view(), name="clear_data"),
 ]

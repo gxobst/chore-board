@@ -307,7 +307,7 @@
         <a href="{% url 'task_list' %}" class="{% block nav_task_list %}{% endblock %}">Task List</a>
         <a href="{% url 'calendar' %}" class="{% block nav_calendar %}{% endblock %}">Calendar</a>
         <a href="{% url 'completed' %}" class="{% block nav_completed %}{% endblock %}">Completed</a>
-        <a href="#" class="{% block nav_settings %}{% endblock %}">Settings</a>
+        <a href="{% url 'settings' %}" class="{% block nav_settings %}{% endblock %}">Settings</a>
     </nav>
 </body>
 </html>

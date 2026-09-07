@@ -1,0 +1,58 @@
+{% extends "chores/base.html" %}
+
+{% block title %}Settings - Chore Board{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block nav_settings %}active{% endblock %}
+
+{% block content %}
+<h2 class="section-title">Settings</h2>
+
+{% if import_success %}
+<div class="alert alert-success" style="background-color: #dcfce7; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+    {{ import_success }}
+</div>
+{% endif %}
+
+{% if import_error %}
+<div class="alert alert-error" style="background-color: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+    {{ import_error }}
+</div>
+{% endif %}
+
+{% if clear_success %}
+<div class="alert alert-success" style="background-color: #dcfce7; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+    {{ clear_success }}
+</div>
+{% endif %}
+
+<div class="settings-section" style="margin-bottom: 24px;">
+    <h3 style="font-size: 1rem; margin-bottom: 8px;">Export Data</h3>
+    <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 12px;">
+        Download all your chores as a JSON file for backup.
+    </p>
+    <a href="{% url 'export_data' %}" class="btn btn-primary">Export as JSON</a>
+</div>
+
+<div class="settings-section" style="margin-bottom: 24px;">
+    <h3 style="font-size: 1rem; margin-bottom: 8px;">Import Data</h3>
+    <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 12px;">
+        Import chores from a previously exported JSON file.
+    </p>
+    <form method="post" action="{% url 'import_data' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="import-file">Select JSON file</label>
+            <input type="file" name="file" id="import-file" accept=".json,application/json" class="form-input" required>
+        </div>
+        <button type="submit" class="btn btn-secondary">Import</button>
+    </form>
+</div>
+
+<div class="settings-section" style="margin-bottom: 24px;">
+    <h3 style="font-size: 1rem; margin-bottom: 8px; color: #dc2626;">Danger Zone</h3>
+    <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 12px;">
+        Permanently delete all chores. This action cannot be undone.
+    </p>
+    <a href="{% url 'clear_data' %}" class="btn btn-danger">Clear All Data</a>
+</div>
+{% endblock %}

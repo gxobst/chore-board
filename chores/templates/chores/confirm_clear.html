@@ -1,0 +1,26 @@
+{% extends "chores/base.html" %}
+
+{% block title %}Clear All Data - Chore Board{% endblock %}
+{% block page_title %}Clear All Data{% endblock %}
+{% block nav_settings %}active{% endblock %}
+
+{% block content %}
+<h2 class="section-title">Clear All Data</h2>
+
+<div style="background-color: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+    <p style="color: #991b1b; font-weight: 600; margin-bottom: 8px;">⚠️ Warning</p>
+    <p style="color: #7f1d1d; font-size: 0.875rem;">
+        This will permanently delete all chores (both active and completed). This action cannot be undone.
+    </p>
+</div>
+
+<p style="margin-bottom: 24px;">Are you sure you want to clear all data?</p>
+
+<form method="post" action="{% url 'clear_data' %}">
+    {% csrf_token %}
+    <div style="display: flex; gap: 12px;">
+        <button type="submit" class="btn btn-danger">Yes, Clear All Data</button>
+        <a href="{% url 'settings' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}
