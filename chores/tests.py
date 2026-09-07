@@ -1,4 +1,5 @@
-from django.test import TestCase
+from django.test import TestCase, Client
+from django.urls import reverse
 from django.db.utils import IntegrityError
 from chores.models import Chore, Tag
 
@@ -97,3 +98,266 @@ class ChoreModelTest(TestCase):
         chores = list(Chore.objects.all())
         self.assertEqual(chores[0].title, "Earlier")
         self.assertEqual(chores[1].title, "Later")
+
+
+class CreateChoreViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("create_chore")
+
+    def test_get_returns_200_and_renders_form(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Create New Chore")
+        self.assertContains(response, "Title")
+        self.assertContains(response, "Due Date")
+        self.assertContains(response, "Assignee")
+        self.assertContains(response, "Priority")
+        self.assertContains(response, "Tags")
+        self.assertContains(response, "Notes")
+
+    def test_form_reachable_from_navigation(self):
+        response = self.client.get(reverse("task_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Add")
+        self.assertContains(response, self.url)
+
+    def test_post_valid_data_creates_chore_and_redirects(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "Alex",
+            "notes": "Use soap",
+            "priority": "High",
+            "tags_text": "Kitchen, Cleaning",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("task_list"))
+        self.assertEqual(Chore.objects.count(), 1)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.title, "Wash dishes")
+        self.assertEqual(str(chore.due_date), "2025-01-15")
+        self.assertEqual(chore.assignee, "Alex")
+        self.assertEqual(chore.notes, "Use soap")
+        self.assertEqual(chore.priority, "High")
+        self.assertEqual(chore.tags.count(), 2)
+
+    def test_post_empty_title_shows_error_and_does_not_save(self):
+        data = {
+            "title": "",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "errorlist")
+        self.assertEqual(Chore.objects.count(), 0)
+
+    def test_post_whitespace_title_shows_error_and_does_not_save(self):
+        data = {
+            "title": "   ",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "errorlist")
+        self.assertEqual(Chore.objects.count(), 0)
+
+    def test_post_empty_due_date_shows_error_and_does_not_save(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "errorlist")
+        self.assertEqual(Chore.objects.count(), 0)
+
+    def test_post_assignee_optional(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.assignee, "")
+
+    def test_post_assignee_from_predefined_partners(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "Jordan",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.assignee, "Jordan")
+
+    def test_post_priority_optional(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.priority, "")
+
+    def test_post_priority_choices(self):
+        for priority in ["Low", "Medium", "High"]:
+            data = {
+                "title": f"Chore {priority}",
+                "due_date": "2025-01-15",
+                "assignee": "",
+                "notes": "",
+                "priority": priority,
+                "tags_text": "",
+            }
+            response = self.client.post(self.url, data)
+            self.assertEqual(response.status_code, 302)
+            chore = Chore.objects.get(title=f"Chore {priority}")
+            self.assertEqual(chore.priority, priority)
+
+    def test_post_tags_accept_multiple_free_form(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "",
+            "priority": "",
+            "tags_text": "Kitchen, Cleaning, Urgent",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        tag_names = list(chore.tags.values_list("name", flat=True))
+        self.assertIn("Kitchen", tag_names)
+        self.assertIn("Cleaning", tag_names)
+        self.assertIn("Urgent", tag_names)
+
+    def test_post_notes_optional_free_text(self):
+        data = {
+            "title": "Wash dishes",
+            "due_date": "2025-01-15",
+            "assignee": "",
+            "notes": "Use the new sponge",
+            "priority": "",
+            "tags_text": "",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.notes, "Use the new sponge")
+
+    def test_form_layout_mobile_friendly(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "viewport")
+        self.assertContains(response, "width=device-width")
+        self.assertContains(response, "form-input")
+        self.assertContains(response, "btn-primary")
+
+    def test_form_has_labels_for_all_fields(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Title")
+        self.assertContains(response, "Due Date")
+        self.assertContains(response, "Assignee")
+        self.assertContains(response, "Priority")
+        self.assertContains(response, "Tags")
+        self.assertContains(response, "Notes")
+
+    def test_form_works_without_javascript(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<form")
+        self.assertContains(response, "method=\"post\"")
+        self.assertContains(response, "csrfmiddlewaretoken")
+        self.assertNotContains(response, "onclick")
+        self.assertNotContains(response, "onsubmit")
+
+    def test_all_fields_save_correctly(self):
+        data = {
+            "title": "Clean bathroom",
+            "due_date": "2025-03-20",
+            "assignee": "Alex",
+            "notes": "Scrub the tub",
+            "priority": "Medium",
+            "tags_text": "Bathroom, Deep Clean",
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        chore = Chore.objects.first()
+        self.assertEqual(chore.title, "Clean bathroom")
+        self.assertEqual(str(chore.due_date), "2025-03-20")
+        self.assertEqual(chore.assignee, "Alex")
+        self.assertEqual(chore.notes, "Scrub the tub")
+        self.assertEqual(chore.priority, "Medium")
+        self.assertEqual(chore.tags.count(), 2)
+        tag_names = list(chore.tags.values_list("name", flat=True))
+        self.assertIn("Bathroom", tag_names)
+        self.assertIn("Deep Clean", tag_names)
+
+
+class TaskListViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("task_list")
+
+    def test_get_returns_200(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_only_incomplete_chores_appear(self):
+        Chore.objects.create(title="Active", due_date="2025-01-15", completed=False)
+        Chore.objects.create(title="Done", due_date="2025-01-16", completed=True)
+        response = self.client.get(self.url)
+        self.assertContains(response, "Active")
+        self.assertNotContains(response, "Done")
+
+    def test_chores_ordered_by_due_date_ascending(self):
+        Chore.objects.create(title="Later", due_date="2025-02-15")
+        Chore.objects.create(title="Earlier", due_date="2025-01-15")
+        response = self.client.get(self.url)
+        content = response.content.decode()
+        self.assertLess(content.index("Earlier"), content.index("Later"))
+
+    def test_empty_list_shows_empty_state(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "No chores yet")
+
+    def test_row_displays_title_due_date_assignee_priority(self):
+        Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+            assignee="Alex",
+            priority="High",
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, "Wash dishes")
+        self.assertContains(response, "Alex")
+        self.assertContains(response, "High")

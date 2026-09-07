@@ -1,0 +1,36 @@
+{% extends "chores/base.html" %}
+
+{% block title %}Task List - Chore Board{% endblock %}
+{% block page_title %}Task List{% endblock %}
+{% block nav_task_list %}active{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <h2 style="font-size: 1.25rem;">Tasks</h2>
+    <a href="{% url 'create_chore' %}" class="btn btn-primary" style="width: auto; padding: 8px 16px;">+ Add</a>
+</div>
+
+{% if chores %}
+    {% for chore in chores %}
+    <div class="chore-card {% if chore.due_date < today %}overdue{% endif %}">
+        <div class="chore-title">{{ chore.title }}</div>
+        <div class="chore-due-date">
+            Due: {{ chore.due_date|date:"M d, Y" }}
+            {% if chore.assignee %}
+            <span class="badge">{{ chore.assignee }}</span>
+            {% endif %}
+            {% if chore.priority %}
+            <span class="priority-dot priority-{{ chore.priority }}"></span>{{ chore.priority }}
+            {% endif %}
+        </div>
+        {% for tag in chore.tags.all %}
+        <span class="badge">{{ tag.name }}</span>
+        {% endfor %}
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <p>No chores yet. Create your first chore!</p>
+    </div>
+{% endif %}
+{% endblock %}

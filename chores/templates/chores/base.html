@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chore Board{% endblock %}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 16px;
+            background-color: #f9fafb;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        header {
+            position: sticky;
+            top: 0;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px;
+            z-index: 100;
+        }
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        header .page-title {
+            font-size: 1rem;
+            color: #6b7280;
+        }
+        main {
+            padding: 24px 0;
+            padding-bottom: 100px;
+        }
+        nav.bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 100;
+        }
+        nav.bottom-nav a {
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 0.75rem;
+            padding: 8px 16px;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        nav.bottom-nav a:hover,
+        nav.bottom-nav a.active {
+            color: #2563eb;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 0.875rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: #ffffff;
+            min-height: 44px;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        select.form-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            min-height: 44px;
+            width: 100%;
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .errorlist {
+            list-style: none;
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 4px;
+        }
+        .errorlist li {
+            padding: 2px 0;
+        }
+        .form-group.has-error .form-input {
+            border-color: #dc2626;
+        }
+        .help-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 48px 16px;
+            color: #6b7280;
+        }
+        .chore-card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .chore-card.overdue {
+            border-left: 4px solid #dc2626;
+        }
+        .chore-card .chore-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .chore-card .chore-due-date {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .priority-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .priority-Low { background-color: #16a34a; }
+        .priority-Medium { background-color: #f59e0b; }
+        .priority-High { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Chore Board</h1>
+            <span class="page-title">{% block page_title %}Home{% endblock %}</span>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <nav class="bottom-nav">
+        <a href="{% url 'task_list' %}" class="{% block nav_task_list %}{% endblock %}">Task List</a>
+        <a href="#" class="{% block nav_calendar %}{% endblock %}">Calendar</a>
+        <a href="#" class="{% block nav_completed %}{% endblock %}">Completed</a>
+        <a href="#" class="{% block nav_settings %}{% endblock %}">Settings</a>
+    </nav>
+</body>
+</html>
