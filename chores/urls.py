@@ -11,4 +11,5 @@ urlpatterns = [
     path("completed/", views.CompletedView.as_view(), name="completed"),
     path("<int:pk>/restore/", views.RestoreChoreView.as_view(), name="restore_chore"),
     path("completed/bulk-restore/", views.BulkRestoreView.as_view(), name="bulk_restore"),
+    path("calendar/", views.CalendarView.as_view(), name="calendar"),
 ]

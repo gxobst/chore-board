@@ -288,6 +288,7 @@
                 align-items: flex-start;
             }
         }
+        {% block extra_css %}{% endblock %}
     </style>
 </head>
 <body>
@@ -304,7 +305,7 @@
     </main>
     <nav class="bottom-nav">
         <a href="{% url 'task_list' %}" class="{% block nav_task_list %}{% endblock %}">Task List</a>
-        <a href="#" class="{% block nav_calendar %}{% endblock %}">Calendar</a>
+        <a href="{% url 'calendar' %}" class="{% block nav_calendar %}{% endblock %}">Calendar</a>
         <a href="{% url 'completed' %}" class="{% block nav_completed %}{% endblock %}">Completed</a>
         <a href="#" class="{% block nav_settings %}{% endblock %}">Settings</a>
     </nav>

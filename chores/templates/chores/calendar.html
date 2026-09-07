@@ -1,0 +1,236 @@
+{% extends "chores/base.html" %}
+
+{% block title %}Calendar - Chore Board{% endblock %}
+{% block page_title %}Calendar{% endblock %}
+{% block nav_calendar %}active{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <!-- Month navigation -->
+    <div class="calendar-header">
+        <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-secondary calendar-nav-btn">&larr; Prev</a>
+        <h2 class="calendar-title">{{ month_name }} {{ year }}</h2>
+        <a href="?year={{ next_year }}&month={{ next_month }}" class="btn btn-secondary calendar-nav-btn">Next &rarr;</a>
+    </div>
+
+    <!-- Today button -->
+    <div class="calendar-today-row">
+        <a href="{% url 'calendar' %}" class="btn btn-secondary btn-today">Today</a>
+    </div>
+
+    <!-- Day-of-week header -->
+    <div class="calendar-grid">
+        <div class="calendar-row calendar-day-header">
+            <div class="calendar-day-name">Sun</div>
+            <div class="calendar-day-name">Mon</div>
+            <div class="calendar-day-name">Tue</div>
+            <div class="calendar-day-name">Wed</div>
+            <div class="calendar-day-name">Thu</div>
+            <div class="calendar-day-name">Fri</div>
+            <div class="calendar-day-name">Sat</div>
+        </div>
+
+        <!-- Calendar weeks -->
+        {% for week in grid %}
+        <div class="calendar-row">
+            {% for day_info in week %}
+            <div class="calendar-cell {% if day_info.is_padding %}padding{% endif %} {% if day_info.is_today %}today{% endif %} {% if day_info.has_chore %}has-chore{% endif %}">
+                {% if day_info.date %}
+                <a href="{% url 'create_chore' %}?due_date={{ day_info.date|date:'Y-m-d' }}" class="calendar-day-link {% if day_info.has_chore %}has-chore{% endif %}">
+                    <span class="day-number">{{ day_info.day }}</span>
+                    {% if day_info.has_chore %}
+                    <span class="chore-indicator"></span>
+                    {% endif %}
+                </a>
+                {% else %}
+                <span class="day-number padding-day">&nbsp;</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.calendar-container {
+    margin: 0 auto;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.calendar-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.calendar-nav-btn {
+    width: auto;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    min-height: 44px;
+}
+
+.calendar-today-row {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.btn-today {
+    width: auto;
+    padding: 8px 16px;
+    min-height: 44px;
+    font-size: 0.875rem;
+}
+
+.calendar-grid {
+    width: 100%;
+}
+
+.calendar-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+}
+
+.calendar-day-header {
+    margin-bottom: 4px;
+}
+
+.calendar-day-name {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 8px 0;
+}
+
+.calendar-cell {
+    aspect-ratio: 1;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.calendar-cell.padding {
+    pointer-events: none;
+}
+
+.calendar-day-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+    color: #1f2937;
+    border-radius: 50%;
+    padding: 4px;
+    min-height: 44px;
+    min-width: 44px;
+    transition: background-color 0.15s;
+}
+
+.calendar-day-link:hover {
+    background-color: #eff6ff;
+}
+
+.calendar-cell.today .calendar-day-link {
+    background-color: #2563eb;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.calendar-cell.today .calendar-day-link:hover {
+    background-color: #1d4ed8;
+}
+
+.calendar-cell.has-chore .calendar-day-link:not(.today) {
+    font-weight: 600;
+}
+
+.calendar-cell.has-chore .calendar-day-link:not(.today) {
+    background-color: #dbeafe;
+}
+
+.calendar-cell.has-chore .calendar-day-link:not(.today):hover {
+    background-color: #bfdbfe;
+}
+
+.chore-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #2563eb;
+    margin-top: 2px;
+}
+
+.calendar-cell.today .chore-indicator {
+    background-color: #ffffff;
+}
+
+.day-number {
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+.day-number.padding-day {
+    color: #d1d5db;
+}
+
+/* Responsive adjustments */
+@media (min-width: 481px) {
+    .calendar-cell {
+        min-height: 60px;
+    }
+    
+    .calendar-day-link {
+        min-height: 60px;
+        min-width: 60px;
+    }
+    
+    .calendar-title {
+        font-size: 1.5rem;
+    }
+    
+    .calendar-day-name {
+        font-size: 0.875rem;
+    }
+    
+    .day-number {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .calendar-nav-btn {
+        padding: 6px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .calendar-title {
+        font-size: 1.1rem;
+    }
+    
+    .calendar-cell {
+        min-height: 40px;
+    }
+    
+    .calendar-day-link {
+        min-height: 40px;
+        min-width: 40px;
+    }
+}
+</style>
+{% endblock %}

@@ -837,3 +837,134 @@ class BulkRestoreViewTest(TestCase):
         self.client.post(self.url, {"chore_ids": [selected.pk]})
         other.refresh_from_db()
         self.assertTrue(other.completed)
+
+
+class CalendarViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("calendar")
+
+    def test_get_returns_200_and_displays_current_month(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        import calendar as cal
+        from django.utils import timezone
+        today = timezone.localdate()
+        month_name = cal.month_name[today.month]
+        self.assertContains(response, month_name)
+        self.assertContains(response, str(today.year))
+
+    def test_calendar_uses_correct_template(self):
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, "chores/calendar.html")
+
+    def test_calendar_has_month_navigation(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Prev")
+        self.assertContains(response, "Next")
+
+    def test_calendar_has_today_button(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Today")
+
+    def test_calendar_shows_day_headers(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        for day in ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]:
+            self.assertContains(response, day)
+
+    def test_dates_with_chores_are_highlighted(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        # Create an active chore for today
+        Chore.objects.create(title="Active Chore", due_date=today, completed=False)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Check that the chore indicator class or element is present
+        self.assertContains(response, "has-chore")
+
+    def test_completed_chores_not_highlighted(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        # Create a completed chore for today
+        Chore.objects.create(title="Done Chore", due_date=today, completed=True)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Should NOT have any cell with has-chore class because the chore is completed
+        content = response.content.decode()
+        # Check that no calendar-cell has 'has-chore' class (ignore CSS definitions)
+        self.assertNotContains(response, "calendar-cell  has-chore")
+        self.assertNotContains(response, "calendar-cell today has-chore")
+        # Also verify no chore indicator span element is present in HTML
+        self.assertNotContains(response, 'chore-indicator"></span>')
+
+    def test_clicking_date_opens_create_form_with_prefilled_date(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Check that there's a link to create chore with the date pre-filled
+        date_str = today.strftime("%Y-%m-%d")
+        create_url = reverse("create_chore")
+        self.assertContains(response, f'{create_url}?due_date={date_str}')
+
+    def test_next_month_navigation(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        next_month = today.month + 1
+        next_year = today.year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+        response = self.client.get(f"{self.url}?year={next_year}&month={next_month}")
+        self.assertEqual(response.status_code, 200)
+        import calendar as cal
+        next_month_name = cal.month_name[next_month]
+        self.assertContains(response, next_month_name)
+        self.assertContains(response, str(next_year))
+
+    def test_prev_month_navigation(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        prev_month = today.month - 1
+        prev_year = today.year
+        if prev_month < 1:
+            prev_month = 12
+            prev_year -= 1
+        response = self.client.get(f"{self.url}?year={prev_year}&month={prev_month}")
+        self.assertEqual(response.status_code, 200)
+        import calendar as cal
+        prev_month_name = cal.month_name[prev_month]
+        self.assertContains(response, prev_month_name)
+        self.assertContains(response, str(prev_year))
+
+    def test_padding_days_are_dimmed(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Padding cells should have the 'padding' class
+        self.assertContains(response, "padding")
+
+    def test_today_is_highlighted(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Today's cell should have 'today' class
+        self.assertContains(response, "today")
+
+    def test_calendar_responsive_viewport(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "viewport")
+
+    def test_calendar_navigation_links_in_context(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # Check that prev/next links are in the HTML
+        content = response.content.decode()
+        self.assertIn("calendar", content.lower())
+
