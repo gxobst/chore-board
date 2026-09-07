@@ -309,5 +309,6 @@
         <a href="{% url 'completed' %}" class="{% block nav_completed %}{% endblock %}">Completed</a>
         <a href="{% url 'settings' %}" class="{% block nav_settings %}{% endblock %}">Settings</a>
     </nav>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

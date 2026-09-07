@@ -4,10 +4,209 @@
 {% block page_title %}Task List{% endblock %}
 {% block nav_task_list %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+    .filters-container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+    .filters-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 120px;
+        flex: 1;
+    }
+    .filter-group label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+    .filter-group select,
+    .filter-group input[type="text"] {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        background-color: #ffffff;
+        min-height: 44px;
+    }
+    .filter-group select:focus,
+    .filter-group input[type="text"]:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .search-group {
+        flex: 2;
+        min-width: 200px;
+    }
+    .tags-filter-group {
+        flex: 1.5;
+    }
+    .tags-checkboxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background-color: #ffffff;
+        max-height: 100px;
+        overflow-y: auto;
+    }
+    .tags-checkboxes label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.875rem;
+        font-weight: 400;
+        color: #374151;
+        margin: 0;
+        cursor: pointer;
+    }
+    .tags-checkboxes input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+    .btn-apply-filters {
+        background-color: #2563eb;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        min-height: 44px;
+        white-space: nowrap;
+    }
+    .btn-apply-filters:hover {
+        background-color: #1d4ed8;
+    }
+    .btn-clear-filters {
+        background-color: #ffffff;
+        color: #6b7280;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        min-height: 44px;
+        white-space: nowrap;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-clear-filters:hover {
+        background-color: #f3f4f6;
+        color: #374151;
+    }
+    .no-filters-message {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-style: italic;
+    }
+    @media (max-width: 480px) {
+        .filters-row {
+            flex-direction: column;
+        }
+        .filter-group {
+            width: 100%;
+        }
+        .btn-apply-filters,
+        .btn-clear-filters {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="task-list-header">
     <h2 class="section-title">Tasks</h2>
     <a href="{% url 'create_chore' %}" class="btn btn-primary btn-add">+ Add</a>
+</div>
+
+<!-- Filter Controls -->
+<div class="filters-container">
+    <form method="get" action="{% url 'task_list' %}" id="filter-form">
+        <div class="filters-row">
+            <!-- Search Box -->
+            <div class="filter-group search-group">
+                <label for="search-input">Search</label>
+                <input type="text" id="search-input" name="search" value="{{ search_query }}" placeholder="Search title or notes..." autocomplete="off">
+            </div>
+
+            <!-- Assignee Filter -->
+            <div class="filter-group">
+                <label for="assignee-select">Assignee</label>
+                <select id="assignee-select" name="assignee">
+                    <option value="">Any</option>
+                    {% for a in assignees %}
+                    <option value="{{ a }}" {% if current_assignee == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Priority Filter -->
+            <div class="filter-group">
+                <label for="priority-select">Priority</label>
+                <select id="priority-select" name="priority">
+                    <option value="">Any</option>
+                    {% for p in priorities %}
+                    <option value="{{ p }}" {% if current_priority == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-group">
+                <label for="status-select">Status</label>
+                <select id="status-select" name="status">
+                    <option value="" {% if not current_status %}selected{% endif %}>Active</option>
+                    <option value="active" {% if current_status == "active" %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if current_status == "completed" %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tags Filter -->
+        {% if all_tags %}
+        <div class="filters-row" style="margin-top: 12px;">
+            <div class="filter-group tags-filter-group" style="width: 100%;">
+                <label>Tags</label>
+                <div class="tags-checkboxes">
+                    {% for tag in all_tags %}
+                    <label>
+                        <input type="checkbox" name="tags" value="{{ tag.id }}" {% if tag.id in current_tag_ids %}checked{% endif %}>
+                        {{ tag.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="filters-row" style="margin-top: 12px;">
+            <button type="submit" class="btn-apply-filters">Apply Filters</button>
+            {% if has_active_filters %}
+            <a href="{% url 'task_list' %}" class="btn-clear-filters">Clear All</a>
+            {% endif %}
+        </div>
+    </form>
 </div>
 
 {% if chores %}
@@ -43,8 +242,43 @@
     </div>
 {% else %}
     <div class="empty-state">
-        <p class="empty-state-message">No chores yet — add your first one</p>
-        <a href="{% url 'create_chore' %}" class="btn btn-primary">Create a chore</a>
+        {% if has_active_filters %}
+            <p class="empty-state-message">No chores match your filters</p>
+            <a href="{% url 'task_list' %}" class="btn btn-secondary">Clear Filters</a>
+        {% else %}
+            <p class="empty-state-message">No chores yet — add your first one</p>
+            <a href="{% url 'create_chore' %}" class="btn btn-primary">Create a chore</a>
+        {% endif %}
     </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form when select filters change
+    document.querySelectorAll('#assignee-select, #priority-select, #status-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            document.getElementById('filter-form').submit();
+        });
+    });
+
+    // Debounced search input
+    var searchInput = document.getElementById('search-input');
+    var searchTimeout;
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                document.getElementById('filter-form').submit();
+            }, 400);
+        });
+    }
+
+    // Auto-submit when tag checkboxes change
+    document.querySelectorAll('.tags-checkboxes input[type="checkbox"]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            document.getElementById('filter-form').submit();
+        });
+    });
+</script>
 {% endblock %}

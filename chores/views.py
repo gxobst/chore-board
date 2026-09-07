@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.db.models import Q
 from .forms import ChoreForm
 from .models import Chore, Tag
 import calendar
@@ -90,10 +91,73 @@ class CreateChoreView(View):
 
 class TaskListView(View):
     def get(self, request):
-        chores = Chore.objects.filter(completed=False).order_by("due_date", "created_at")
+        # Start with all chores; default to active only (no status filter)
+        chores = Chore.objects.all()
+        status = request.GET.get("status", "")
+        if status == "completed":
+            chores = chores.filter(completed=True)
+        elif status == "active":
+            chores = chores.filter(completed=False)
+        else:
+            # Default: show active chores only (matches existing behavior)
+            chores = chores.filter(completed=False)
+
+        # Filter by assignee
+        assignee = request.GET.get("assignee", "")
+        if assignee:
+            chores = chores.filter(assignee=assignee)
+
+        # Filter by priority
+        priority = request.GET.get("priority", "")
+        if priority:
+            chores = chores.filter(priority=priority)
+
+        # Filter by tags (multi-select, OR within tags)
+        tag_ids = request.GET.getlist("tags")
+        if tag_ids:
+            chores = chores.filter(tags__id__in=tag_ids).distinct()
+
+        # Search by title and notes (case-insensitive)
+        search = request.GET.get("search", "")
+        if search:
+            chores = chores.filter(
+                Q(title__icontains=search) | Q(notes__icontains=search)
+            )
+
+        # Order by due_date ascending
+        chores = chores.order_by("due_date", "created_at")
+
+        # Get filter options for dropdowns
+        assignees = (
+            Chore.objects.exclude(assignee="")
+            .values_list("assignee", flat=True)
+            .distinct()
+            .order_by("assignee")
+        )
+        priorities = ["Low", "Medium", "High"]
+        all_tags = Tag.objects.all().order_by("name")
+
         today = timezone.localdate()
         mailto = get_reminder_mailto()
-        return render(request, "chores/task_list.html", {"chores": chores, "today": today, "reminder_mailto": mailto})
+
+        # Determine if any filter is active for "Clear all" display
+        has_active_filters = any([assignee, priority, status, tag_ids, search])
+
+        context = {
+            "chores": chores,
+            "today": today,
+            "reminder_mailto": mailto,
+            "assignees": assignees,
+            "priorities": priorities,
+            "all_tags": all_tags,
+            "current_assignee": assignee,
+            "current_priority": priority,
+            "current_status": status,
+            "current_tag_ids": [int(t) for t in tag_ids],
+            "search_query": search,
+            "has_active_filters": has_active_filters,
+        }
+        return render(request, "chores/task_list.html", context)
 
 
 class TaskDetailView(View):
