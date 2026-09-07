@@ -1,0 +1,40 @@
+{% extends "chores/base.html" %}
+
+{% block title %}Completed Chores - Chore Board{% endblock %}
+{% block page_title %}Completed{% endblock %}
+{% block nav_completed %}active{% endblock %}
+
+{% block content %}
+<div class="task-list-header">
+    <h2 class="section-title">Completed Chores</h2>
+</div>
+
+{% if chores %}
+<form method="post" action="{% url 'bulk_restore' %}" id="bulk-restore-form">
+    {% csrf_token %}
+    <div class="completed-list">
+        {% for chore in chores %}
+        <div class="completed-row" style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+            <input type="checkbox" name="chore_ids" value="{{ chore.pk }}" id="chore_{{ chore.pk }}" style="min-width: 20px; min-height: 20px;">
+            <label for="chore_{{ chore.pk }}" style="flex: 1; cursor: pointer;">
+                <span class="completed-title" style="font-weight: 600; font-size: 1rem;">{{ chore.title }}</span>
+                <span class="completed-date" style="font-size: 0.875rem; color: #6b7280; display: block;">Completed: {{ chore.completed_at|date:"M d, Y" }}</span>
+            </label>
+            <form method="post" action="{% url 'restore_chore' chore.pk %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary" style="width: auto; padding: 8px 16px; min-height: 44px;">Restore</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-primary" id="bulk-restore-btn" style="width: auto; min-width: 120px;">Restore Selected</button>
+    </div>
+</form>
+{% else %}
+<div class="empty-state">
+    <p class="empty-state-message">No completed chores yet</p>
+    <a href="{% url 'task_list' %}" class="btn btn-primary">Back to Task List</a>
+</div>
+{% endif %}
+{% endblock %}

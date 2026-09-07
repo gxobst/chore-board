@@ -641,3 +641,199 @@ class TaskDetailNotFoundTest(TestCase):
         url = reverse("task_detail", kwargs={"pk": 9999})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
+
+class CompletedViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("completed")
+
+    def test_get_returns_200(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_completed_view_shows_only_completed_chores(self):
+        Chore.objects.create(title="Active", due_date="2025-01-15", completed=False)
+        Chore.objects.create(title="Done", due_date="2025-01-16", completed=True)
+        response = self.client.get(self.url)
+        self.assertContains(response, "Done")
+        self.assertNotContains(response, "Active")
+
+    def test_completed_chores_ordered_most_recently_completed_first(self):
+        import datetime
+        from django.utils import timezone
+
+        base = timezone.now()
+        Chore.objects.create(
+            title="Older",
+            due_date="2025-01-15",
+            completed=True,
+            completed_at=base - datetime.timedelta(hours=2),
+        )
+        Chore.objects.create(
+            title="Newer",
+            due_date="2025-01-16",
+            completed=True,
+            completed_at=base,
+        )
+        response = self.client.get(self.url)
+        content = response.content.decode()
+        self.assertLess(content.index("Newer"), content.index("Older"))
+
+    def test_completed_row_displays_title_and_completion_date(self):
+        Chore.objects.create(
+            title="Done Chore",
+            due_date="2025-01-15",
+            completed=True,
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, "Done Chore")
+        self.assertContains(response, "Completed:")
+
+    def test_empty_completed_list_shows_empty_state(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "No completed chores yet")
+
+    def test_completed_view_uses_correct_template(self):
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, "chores/completed.html")
+
+    def test_completed_view_accessible_from_navigation(self):
+        response = self.client.get(reverse("task_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/completed/"')
+
+    def test_completed_chores_not_in_task_list(self):
+        Chore.objects.create(
+            title="Done Chore",
+            due_date="2025-01-15",
+            completed=True,
+        )
+        response = self.client.get(reverse("task_list"))
+        self.assertNotContains(response, "Done Chore")
+
+    def test_completed_view_has_restore_buttons(self):
+        Chore.objects.create(
+            title="Done Chore",
+            due_date="2025-01-15",
+            completed=True,
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, "Restore")
+
+
+class RestoreChoreViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.chore = Chore.objects.create(
+            title="Done Chore",
+            due_date="2025-01-15",
+            assignee="Alex",
+            notes="Use soap",
+            priority="High",
+            completed=True,
+        )
+        self.tag = Tag.objects.create(name="Kitchen")
+        self.chore.tags.add(self.tag)
+
+    def test_restore_sets_completed_false(self):
+        url = reverse("restore_chore", kwargs={"pk": self.chore.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.chore.refresh_from_db()
+        self.assertFalse(self.chore.completed)
+
+    def test_restore_redirects_to_completed_view(self):
+        url = reverse("restore_chore", kwargs={"pk": self.chore.pk})
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("completed"))
+
+    def test_restore_preserves_all_fields(self):
+        url = reverse("restore_chore", kwargs={"pk": self.chore.pk})
+        self.client.post(url)
+        self.chore.refresh_from_db()
+        self.assertEqual(self.chore.title, "Done Chore")
+        self.assertEqual(str(self.chore.due_date), "2025-01-15")
+        self.assertEqual(self.chore.assignee, "Alex")
+        self.assertEqual(self.chore.notes, "Use soap")
+        self.assertEqual(self.chore.priority, "High")
+        self.assertIn(self.tag, self.chore.tags.all())
+
+    def test_restore_chore_reappears_in_active_list(self):
+        url = reverse("restore_chore", kwargs={"pk": self.chore.pk})
+        self.client.post(url)
+        response = self.client.get(reverse("task_list"))
+        self.assertContains(response, "Done Chore")
+
+    def test_restore_removes_from_completed_view(self):
+        url = reverse("restore_chore", kwargs={"pk": self.chore.pk})
+        self.client.post(url)
+        response = self.client.get(reverse("completed"))
+        self.assertNotContains(response, "Done Chore")
+
+    def test_restore_clears_completed_at(self):
+        url = reverse("restore_chore", kwargs={"pk": self.chore.pk})
+        self.client.post(url)
+        self.chore.refresh_from_db()
+        self.assertIsNone(self.chore.completed_at)
+
+    def test_restore_nonexistent_chore_returns_404(self):
+        url = reverse("restore_chore", kwargs={"pk": 9999})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 404)
+
+
+class BulkRestoreViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("bulk_restore")
+
+    def test_bulk_restores_multiple_chores(self):
+        chore1 = Chore.objects.create(title="Done 1", due_date="2025-01-15", completed=True)
+        chore2 = Chore.objects.create(title="Done 2", due_date="2025-01-16", completed=True)
+        Chore.objects.create(title="Active", due_date="2025-01-17", completed=False)
+
+        response = self.client.post(self.url, {"chore_ids": [chore1.pk, chore2.pk]})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("completed"))
+
+        chore1.refresh_from_db()
+        chore2.refresh_from_db()
+        self.assertFalse(chore1.completed)
+        self.assertFalse(chore2.completed)
+
+    def test_bulk_restore_chores_disappear_from_completed_view(self):
+        chore1 = Chore.objects.create(title="Done 1", due_date="2025-01-15", completed=True)
+        chore2 = Chore.objects.create(title="Done 2", due_date="2025-01-16", completed=True)
+
+        self.client.post(self.url, {"chore_ids": [chore1.pk, chore2.pk]})
+        response = self.client.get(reverse("completed"))
+        self.assertNotContains(response, "Done 1")
+        self.assertNotContains(response, "Done 2")
+
+    def test_bulk_restore_chores_reappear_in_active_list(self):
+        chore1 = Chore.objects.create(title="Done 1", due_date="2025-01-15", completed=True)
+        chore2 = Chore.objects.create(title="Done 2", due_date="2025-01-16", completed=True)
+
+        self.client.post(self.url, {"chore_ids": [chore1.pk, chore2.pk]})
+        response = self.client.get(reverse("task_list"))
+        self.assertContains(response, "Done 1")
+        self.assertContains(response, "Done 2")
+
+    def test_bulk_restore_with_empty_selection(self):
+        response = self.client.post(self.url, {"chore_ids": []})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("completed"))
+
+    def test_bulk_restore_clears_completed_at(self):
+        chore = Chore.objects.create(title="Done", due_date="2025-01-15", completed=True)
+        self.client.post(self.url, {"chore_ids": [chore.pk]})
+        chore.refresh_from_db()
+        self.assertIsNone(chore.completed_at)
+
+    def test_bulk_restore_preserves_unselected_completed(self):
+        selected = Chore.objects.create(title="Selected", due_date="2025-01-15", completed=True)
+        other = Chore.objects.create(title="Other", due_date="2025-01-16", completed=True)
+        self.client.post(self.url, {"chore_ids": [selected.pk]})
+        other.refresh_from_db()
+        self.assertTrue(other.completed)

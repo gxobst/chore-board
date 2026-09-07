@@ -28,6 +28,7 @@ class Chore(models.Model):
     )
     tags = models.ManyToManyField(Tag, blank=True)
     completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -35,3 +36,11 @@ class Chore(models.Model):
 
     def __str__(self):
         return self.title
+
+    def mark_complete(self):
+        self.completed = True
+        self.completed_at = timezone.now()
+
+    def restore(self):
+        self.completed = False
+        self.completed_at = None
