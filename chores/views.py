@@ -484,6 +484,4 @@ class ClearDataView(View):
     
     def post(self, request):
         Chore.objects.all().delete()
-        return render(request, "chores/settings.html", {
-            "clear_success": "All data has been removed."
-        })
+        return redirect('settings')
