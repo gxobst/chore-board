@@ -35,3 +35,49 @@ Users can quickly find relevant chores on the task list view by filtering on ass
 - Tag multi-select may use a simple list of checkboxes or a basic multi-select widget — no external tag-library dependency.
 - Filter logic runs server-side via query parameters (URL reflects active filters so the state is shareable).
 - Keep the implementation consistent with the existing task list view from Task 3.
+
+## Comment (Software Engineer — 2026-09-07)
+
+Implemented all acceptance criteria for Task 10 (Search and filters):
+
+1. **Views** (`chores/views.py`): Extended `TaskListView` to handle query parameters for `assignee`, `priority`, `status`, `tags` (multi-select), and `search`. Added `Q`-based case-insensitive search on title + notes. Added context data for filter dropdowns (assignees, priorities, all tags) and `has_active_filters` flag for the clear-all link.
+
+2. **Template** (`chores/templates/chores/task_list.html`):
+   - Added a filter bar with dropdowns for assignee, priority, status
+   - Added tag multi-select checkboxes (OR logic within tags)
+   - Added text search input (debounced 400ms auto-submit)
+   - Auto-submit on select change, checkbox change, and search input
+   - "Clear All" link resets all filters
+   - Empty-state message changes when filters are active ("No chores match your filters")
+   - No Apply button required — filters apply immediately on change
+
+3. **Base template** (`chores/templates/chores/base.html`): Added `{lock extra_js 
+## Comment (Software Engineer — 2026-09-07)
+
+Implemented all acceptance criteria for Task 10 (Search and filters):
+
+1. **Views** (`chores/views.py`): Extended `TaskListView` to handle query parameters for `assignee`, `priority`, `status`, `tags` (multi-select), and `search`. Added `Q`-based case-insensitive search on title + notes. Added context data for filter dropdowns (assignees, priorities, all tags) and `has_active_filters` flag for the clear-all link.
+
+2. **Template** (`chores/templates/chores/task_list.html`):
+   - Added a filter bar with dropdowns for assignee, priority, status
+   - Added tag multi-select checkboxes (OR logic within tags)
+   - Added text search input (debounced 400ms auto-submit)
+   - Auto-submit on select change, checkbox change, and search input
+   - "Clear All" link resets all filters
+   - Empty-state message changes when filters are active ("No chores match your filters")
+   - No Apply button required — filters apply immediately on change
+
+3. **Base template** (`chores/templates/chores/base.html`): Added `{% block extra_js %}{% endblock %}` for the filter auto-submit JavaScript.
+
+4. **Tests** (`chores/tests/test_search_filters.py`): 30 tests covering:
+   - Filter by assignee, priority, status (active/completed)
+   - Filter by single tag, multiple tags (OR logic)
+   - Search by title and notes (case-insensitive)
+   - AND logic for multiple filters combined
+   - Search + filter combination
+   - Clear-all link display logic
+   - Empty-state messages (with/without filters)
+   - Filters do not affect Calendar or Completed views
+   - All filter controls render correctly
+
+All 51 tests pass (30 new + 21 existing). Task remains open.
