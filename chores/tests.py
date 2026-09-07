@@ -361,3 +361,56 @@ class TaskListViewTest(TestCase):
         self.assertContains(response, "Wash dishes")
         self.assertContains(response, "Alex")
         self.assertContains(response, "High")
+
+    def test_chores_with_same_due_date_ordered_by_created_at(self):
+        """When two chores share a due date, oldest created_at comes first."""
+        from django.utils import timezone
+        import datetime
+        base = timezone.now()
+        Chore.objects.create(title="First", due_date="2025-01-15", created_at=base)
+        Chore.objects.create(title="Second", due_date="2025-01-15", created_at=base + datetime.timedelta(seconds=1))
+        Chore.objects.create(title="Third", due_date="2025-01-15", created_at=base + datetime.timedelta(seconds=2))
+        response = self.client.get(self.url)
+        content = response.content.decode()
+        self.assertLess(content.index("First"), content.index("Second"))
+        self.assertLess(content.index("Second"), content.index("Third"))
+
+    def test_empty_assignee_shows_placeholder(self):
+        Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+            assignee="",
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, "Unassigned")
+
+    def test_empty_priority_shows_placeholder(self):
+        Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+            priority="",
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, "—")
+
+    def test_chore_row_links_to_detail_view(self):
+        chore = Chore.objects.create(
+            title="Wash dishes",
+            due_date="2025-01-15",
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, f'href="/{chore.pk}/"')
+
+    def test_empty_state_shows_message_and_create_link(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "No chores yet — add your first one")
+        self.assertContains(response, reverse("create_chore"))
+
+    def test_view_uses_correct_template(self):
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, "chores/task_list.html")
+
+    def test_view_is_responsive_viewport_present(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "viewport")
+        self.assertContains(response, "width=device-width")

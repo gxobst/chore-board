@@ -188,6 +188,91 @@
         .priority-Low { background-color: #16a34a; }
         .priority-Medium { background-color: #f59e0b; }
         .priority-High { background-color: #dc2626; }
+
+        /* Task list header */
+        .task-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+        }
+
+        .btn-add {
+            width: auto;
+            padding: 8px 16px;
+        }
+
+        /* Chore card link */
+        .chore-card-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .chore-card-link:focus {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+            border-radius: 8px;
+        }
+
+        .chore-card-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .chore-card-top .chore-title {
+            flex: 1;
+        }
+
+        .chore-card-bottom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chore-priority {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .chore-priority.placeholder {
+            color: #9ca3af;
+        }
+
+        .badge-unassigned {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        /* Empty state */
+        .empty-state-message {
+            margin-bottom: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .task-list-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .btn-add {
+                width: 100%;
+            }
+
+            .chore-card-bottom {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
     </style>
 </head>
 <body>

@@ -20,6 +20,13 @@ class CreateChoreView(View):
 
 class TaskListView(View):
     def get(self, request):
-        chores = Chore.objects.filter(completed=False).order_by("due_date")
+        chores = Chore.objects.filter(completed=False).order_by("due_date", "created_at")
         today = timezone.localdate()
         return render(request, "chores/task_list.html", {"chores": chores, "today": today})
+
+
+class TaskDetailPlaceholderView(View):
+    """Placeholder for Task 4 (Task Detail View). Returns 404 until implemented."""
+    def get(self, request, pk):
+        from django.http import Http404
+        raise Http404("Task detail view not yet implemented.")

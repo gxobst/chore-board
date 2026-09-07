@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Tag(models.Model):
@@ -27,9 +28,10 @@ class Chore(models.Model):
     )
     tags = models.ManyToManyField(Tag, blank=True)
     completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ["due_date"]
+        ordering = ["due_date", "created_at"]
 
     def __str__(self):
         return self.title
