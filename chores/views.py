@@ -6,6 +6,65 @@ from .forms import ChoreForm
 from .models import Chore
 import calendar
 from datetime import date, timedelta
+from urllib.parse import quote
+
+
+def get_reminder_mailto():
+    """Generate a mailto link for all chores needing attention.
+
+    Returns the mailto URL string, or None if no chores are overdue,
+    due today, or due tomorrow.
+    """
+    today = timezone.localdate()
+    tomorrow = today + timedelta(days=1)
+
+    chores = Chore.objects.filter(completed=False).order_by("due_date")
+
+    overdue = []
+    due_today = []
+    due_tomorrow = []
+
+    for chore in chores:
+        if chore.due_date < today:
+            overdue.append(chore)
+        elif chore.due_date == today:
+            due_today.append(chore)
+        elif chore.due_date == tomorrow:
+            due_tomorrow.append(chore)
+
+    if not overdue and not due_today and not due_tomorrow:
+        return None
+
+    lines = ["Chore reminders", ""]
+
+    if overdue:
+        lines.append("Overdue:")
+        for chore in overdue:
+            lines.append(
+                f"- {chore.title} (due {chore.due_date.strftime('%b %d, %Y')})"
+            )
+        lines.append("")
+
+    if due_today:
+        lines.append("Due Today:")
+        for chore in due_today:
+            lines.append(
+                f"- {chore.title} (due {chore.due_date.strftime('%b %d, %Y')})"
+            )
+        lines.append("")
+
+    if due_tomorrow:
+        lines.append("Due Tomorrow:")
+        for chore in due_tomorrow:
+            lines.append(
+                f"- {chore.title} (due {chore.due_date.strftime('%b %d, %Y')})"
+            )
+        lines.append("")
+
+    body = "\n".join(lines)
+    subject = "Chore reminders"
+
+    return f"mailto:?subject={quote(subject, safe='')}&body={quote(body, safe='')}"
 
 
 class CreateChoreView(View):
@@ -31,13 +90,15 @@ class TaskListView(View):
     def get(self, request):
         chores = Chore.objects.filter(completed=False).order_by("due_date", "created_at")
         today = timezone.localdate()
-        return render(request, "chores/task_list.html", {"chores": chores, "today": today})
+        mailto = get_reminder_mailto()
+        return render(request, "chores/task_list.html", {"chores": chores, "today": today, "reminder_mailto": mailto})
 
 
 class TaskDetailView(View):
     def get(self, request, pk):
         chore = get_object_or_404(Chore, pk=pk)
-        return render(request, "chores/task_detail.html", {"chore": chore})
+        mailto = get_reminder_mailto()
+        return render(request, "chores/task_detail.html", {"chore": chore, "reminder_mailto": mailto})
 
 
 class TaskEditView(View):

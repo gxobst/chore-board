@@ -11,6 +11,11 @@
 </div>
 
 {% if chores %}
+    {% if reminder_mailto %}
+    <div class="reminder-action" style="margin-bottom: 24px;">
+        <a href="{{ reminder_mailto }}" class="btn btn-secondary">📧 Generate Reminder</a>
+    </div>
+    {% endif %}
     <div class="chore-list">
         {% for chore in chores %}
         <a href="{% url 'task_detail' chore.pk %}" class="chore-card-link">

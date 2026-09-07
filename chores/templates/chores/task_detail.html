@@ -82,5 +82,8 @@
     <a href="{% url 'task_edit' chore.pk %}" class="btn btn-secondary">Edit</a>
     
     <a href="{% url 'task_delete' chore.pk %}" class="btn btn-danger">Delete</a>
+    {% if reminder_mailto %}
+    <a href="{{ reminder_mailto }}" class="btn btn-secondary">📧 Generate Reminder</a>
+    {% endif %}
 </div>
 {% endblock %}
